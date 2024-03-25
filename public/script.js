@@ -1,32 +1,61 @@
-const game = new Chess();
+var game = new Chess();
 var newBoard = null;
 var $status = $('#status');
 var $fen = $('#fen');
 var $pgn = $('#pgn');
 
 const onDragStart = (source, piece, position, orientation) => {
-  // do not pick up pieces if the game is over
-  if (game.game_over()) return false;
+    // do not pick up pieces if the game is over
+    if (game.game_over()) return false;
 
-  // only pick up pieces for the side to move
-  if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-    return false;
-  }
+    // only pick up pieces for the side to move
+    // if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+    //     (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+    //     return false;
+    // }
+
+    // only pick up pieces for White
+    if (piece.search(/^b/) !== -1) return false
+}
+
+const makeRandomMove = () => {
+    const possibleMoves = game.moves();
+  
+    // game over
+    if (possibleMoves.length === 0) return;
+  
+    const randomIdx = Math.floor(Math.random() * possibleMoves.length);
+    game.move(possibleMoves[randomIdx]);
+    newBoard.position(game.fen());
+}
+
+const AIMove = (move) => {
+    //Send API
+    const link = `/${move.from}/${move.to}/${move.piece}`;
+
+    fetch(link, { method: 'PATCH'})
+        .then(res => res.json())
+        .then(data => {
+            game.move({ from: data.from, to: data.to });
+            newBoard.position(game.fen());
+        })
 }
 
 const onDrop = (source, target) => {
-  // see if the move is legal
-  const move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q' // NOTE: always promote to a queen for example simplicity
-  });
+    // see if the move is legal
+    const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // NOTE: always promote to a queen for example simplicity
+    });
 
-  // illegal move
-  if (move === null) return 'snapback';
+    // illegal move
+    if (move === null) return 'snapback';
 
-  updateStatus();
+    //window.setTimeout(makeRandomMove, 250);
+    AIMove(move);
+
+    updateStatus();
 }
 
 // update the board position after the piece snap
@@ -36,59 +65,37 @@ const onSnapEnd = () => {
 }
 
 const updateStatus = () => {
-  let status = '';
+    let status = '';
 
-  let moveColor = 'White';
-  if (game.turn() === 'b') {
-    moveColor = 'Black';
-  }
-
-  // checkmate?
-  if (game.in_checkmate()) {
-    status = 'Game over, ' + moveColor + ' is in checkmate.';
-  }
-
-  // draw?
-  else if (game.in_draw()) {
-    status = 'Game over, drawn position';
-  }
-
-  // game still on
-  else {
-    status = moveColor + ' to move';
-
-    // check?
-    if (game.in_check()) {
-      status += ', ' + moveColor + ' is in check';
+    let moveColor = 'White';
+    if (game.turn() === 'b') {
+        moveColor = 'Black';
     }
-  }
 
-  $status.html(status)
-  $fen.html(game.fen())
-  $pgn.html(game.pgn())
-}
+    // checkmate?
+    if (game.in_checkmate()) {
+        status = 'Game over, ' + moveColor + ' is in checkmate.';
+    }
 
-//Send data when piece is moved
-const onChange = (oldPos, newPos) => {
-    const newArrPos = Object.entries(newPos).sort();
-    const oldArrPos = Object.entries(oldPos).sort();
+    // draw?
+    else if (game.in_draw()) {
+        status = 'Game over, drawn position';
+    }
 
-    let data;
+    // game still on
+    else {
+        status = moveColor + ' to move';
 
-    for(let i = 0; i < newArrPos.length; i++){
-        if(oldArrPos[i][0] != newArrPos[i][0]){
-            data = {
-                from: oldArrPos[i][0],
-                to: newArrPos[i][0],
-                piece: newArrPos[i][1]
-            }
-
-            console.log(data); 
-            break;
+        // check?
+        if (game.in_check()) {
+        status += ', ' + moveColor + ' is in check';
         }
     }
+
+    $status.html(status)
+    $fen.html(game.fen())
+    $pgn.html(game.pgn())
 }
-//End send data when piece is moved
 
 //Create a new 
 const config = {
@@ -98,14 +105,16 @@ const config = {
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
-    onChange: onChange // fires when the board position changes.
 }
 newBoard = Chessboard('board', config);
 
 updateStatus();
 
 newBoard.start();
-$('#clearBtn').on('click', newBoard.start)
+$('#clearBtn').on('click', () => {
+    newBoard.start();
+    game = new Chess();
+})
 //End create a new board
 
 //Show position
@@ -118,13 +127,3 @@ if(showPositionBtn){
     })
 }
 //End show position
-
-//Move piece
-$('#move1Btn').on('click', () => {
-    newBoard.move('e2-e4')
-})
-  
-$('#move2Btn').on('click', () => {
-    newBoard.move('d2-d4', 'g8-f6')
-})
-//End move piece
