@@ -1,64 +1,65 @@
 const game = new Chess();
+var newBoard = null;
 var $status = $('#status');
 var $fen = $('#fen');
 var $pgn = $('#pgn');
 
-function onDragStart (source, piece, position, orientation) {
+const onDragStart = (source, piece, position, orientation) => {
   // do not pick up pieces if the game is over
-  if (game.game_over()) return false
+  if (game.game_over()) return false;
 
   // only pick up pieces for the side to move
   if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
       (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-    return false
+    return false;
   }
 }
 
-function onDrop (source, target) {
+const onDrop = (source, target) => {
   // see if the move is legal
-  var move = game.move({
+  const move = game.move({
     from: source,
     to: target,
     promotion: 'q' // NOTE: always promote to a queen for example simplicity
-  })
+  });
 
   // illegal move
-  if (move === null) return 'snapback'
+  if (move === null) return 'snapback';
 
-  updateStatus()
+  updateStatus();
 }
 
 // update the board position after the piece snap
 // for castling, en passant, pawn promotion
-function onSnapEnd () {
-  board.position(game.fen())
+const onSnapEnd = () => {
+    newBoard.position(game.fen());
 }
 
-function updateStatus () {
-  var status = ''
+const updateStatus = () => {
+  let status = '';
 
-  var moveColor = 'White'
+  let moveColor = 'White';
   if (game.turn() === 'b') {
-    moveColor = 'Black'
+    moveColor = 'Black';
   }
 
   // checkmate?
   if (game.in_checkmate()) {
-    status = 'Game over, ' + moveColor + ' is in checkmate.'
+    status = 'Game over, ' + moveColor + ' is in checkmate.';
   }
 
   // draw?
   else if (game.in_draw()) {
-    status = 'Game over, drawn position'
+    status = 'Game over, drawn position';
   }
 
   // game still on
   else {
-    status = moveColor + ' to move'
+    status = moveColor + ' to move';
 
     // check?
     if (game.in_check()) {
-      status += ', ' + moveColor + ' is in check'
+      status += ', ' + moveColor + ' is in check';
     }
   }
 
@@ -72,17 +73,17 @@ const onChange = (oldPos, newPos) => {
     const newArrPos = Object.entries(newPos).sort();
     const oldArrPos = Object.entries(oldPos).sort();
 
-    let move;
+    let data;
 
     for(let i = 0; i < newArrPos.length; i++){
         if(oldArrPos[i][0] != newArrPos[i][0]){
-            move = {
+            data = {
                 from: oldArrPos[i][0],
                 to: newArrPos[i][0],
                 piece: newArrPos[i][1]
             }
 
-            console.log(move); 
+            console.log(data); 
             break;
         }
     }
@@ -99,7 +100,7 @@ const config = {
     onSnapEnd: onSnapEnd,
     onChange: onChange // fires when the board position changes.
 }
-let newBoard = Chessboard('board', config);
+newBoard = Chessboard('board', config);
 
 updateStatus();
 
